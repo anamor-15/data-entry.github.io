@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="light dark">
+<meta name="robots" content="noindex,nofollow">
+<title>Entri Data</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="app">
+  <noscript><p class="note warn">Aplikasi ini membutuhkan JavaScript. Aktifkan JavaScript di browser.</p></noscript>
+
+  <div id="v-muat" class="muat">Memuat…</div>
+
+  <!-- ===== 1. HUBUNGKAN GOOGLE ===== -->
+  <section id="v-setup" hidden>
+    <div class="login card">
+      <h1>Entri Data</h1>
+      <p class="sub">Sambungkan dulu ke Google Spreadsheet.</p>
+
+      <div id="ringkasKoneksi" class="note" hidden></div>
+      <div id="boxKoneksi">
+        <label for="cid">Google Client ID</label>
+        <input id="cid" type="text" autocomplete="off" autocapitalize="off" spellcheck="false"
+               placeholder="1234567890-abc….apps.googleusercontent.com">
+        <label for="hurl">Link spreadsheet utama</label>
+        <input id="hurl" type="url" inputmode="url" autocomplete="off" autocapitalize="off" spellcheck="false"
+               placeholder="https://docs.google.com/spreadsheets/d/…">
+        <p class="hint">Spreadsheet utama juga menyimpan akun pengguna dan pengaturan (di tab tersembunyi “_pengaturan”). Admin bisa mengarahkan data ke spreadsheet lain nanti.</p>
+      </div>
+      <p id="galatSetup" class="galat" role="alert" hidden></p>
+      <button type="button" id="btnGoogle" class="btn primary">Sambungkan dengan Google</button>
+      <button type="button" id="btnUbahKoneksi" class="btn ghost" hidden>Ubah koneksi</button>
+
+      <details class="help">
+        <summary>Cara mendapatkan Client ID (sekali saja, gratis)</summary>
+        <ol>
+          <li>Buka <b>console.cloud.google.com</b>, masuk dengan akun Google, lalu buat <b>Project</b> baru.</li>
+          <li>Menu <b>APIs &amp; Services → Library</b>, cari <b>Google Sheets API</b>, klik <b>Enable</b>.</li>
+          <li>Menu <b>OAuth consent screen</b> (atau <b>Google Auth Platform</b>): pilih <b>External</b>, isi nama aplikasi dan email. Di bagian <b>Test users</b>, tambahkan email Google semua orang yang akan memakai aplikasi ini.</li>
+          <li>Menu <b>Credentials → Create credentials → OAuth client ID</b>, jenis <b>Web application</b>. Di <b>Authorized JavaScript origins</b> isi alamat situs ini: <code id="originInfo"></code></li>
+          <li>Salin <b>Client ID</b> yang muncul dan tempel di kolom di atas.</li>
+          <li>Buka spreadsheet-nya, klik <b>Bagikan</b>, dan beri akses <b>Editor</b> ke email Google yang akan dipakai.</li>
+        </ol>
+        <p>Saat Google menampilkan “Google hasn’t verified this app”, pilih <b>Lanjutkan</b>. Itu normal untuk aplikasi pribadi.</p>
+      </details>
+    </div>
+  </section>
+
+  <!-- ===== 2. LOGIN ===== -->
+  <section id="v-login" hidden>
+    <div class="login card">
+      <h1>Entri Data</h1>
+      <p class="sub">Masuk dengan username dan password.</p>
+      <form id="formLogin" autocomplete="on">
+        <label for="lu">Username</label>
+        <input id="lu" name="username" type="text" autocomplete="username" autocapitalize="none" spellcheck="false" maxlength="40">
+        <label for="lp">Password</label>
+        <input id="lp" name="password" type="password" autocomplete="current-password" maxlength="200">
+        <label class="check"><input type="checkbox" id="lihat"> <span>Tampilkan password</span></label>
+        <p id="galatLogin" class="galat" role="alert" hidden></p>
+        <button type="submit" id="btnMasuk" class="btn primary">Masuk</button>
+      </form>
+      <p class="hint">Lupa password? Minta admin untuk mereset.</p>
+      <button type="button" id="btnKoneksi" class="linkbtn">Ubah koneksi Google / spreadsheet</button>
+    </div>
+  </section>
+
+  <!-- ===== 3. APLIKASI ===== -->
+  <section id="v-app" hidden>
+    <header class="top">
+      <div class="bar">
+        <h1>Entri Data</h1>
+        <div class="aksi">
+          <button type="button" id="btnSegar" class="kecil" aria-label="Muat ulang pengaturan" title="Muat ulang pengaturan">⟳</button>
+          <button type="button" id="btnPass" class="kecil">Password</button>
+          <button type="button" id="btnKeluar" class="kecil">Keluar</button>
+        </div>
+      </div>
+      <div class="info">
+        <span id="siapa" class="pill me"></span>
+        <span id="status" class="pill"></span>
+      </div>
+    </header>
+
+    <nav id="tabs" class="tabs" role="tablist" aria-label="Menu" hidden>
+      <button type="button" role="tab" data-tab="isi" aria-selected="false">Isi Data</button>
+      <button type="button" role="tab" data-tab="sheet" aria-selected="false">Spreadsheet</button>
+      <button type="button" role="tab" data-tab="kolom" aria-selected="false">Kolom</button>
+      <button type="button" role="tab" data-tab="user" aria-selected="false">Pengguna</button>
+    </nav>
+
+    <!-- Isi data (semua peran) -->
+    <section id="p-isi" hidden>
+      <form id="form" class="card" autocomplete="off" novalidate>
+        <div id="isian"></div>
+        <div class="actions">
+          <button type="submit" id="btnSimpan" class="btn primary">Simpan ke spreadsheet</button>
+        </div>
+      </form>
+      <p id="terakhir" class="hint"></p>
+    </section>
+
+    <!-- Spreadsheet (admin) -->
+    <section id="p-sheet" class="card" hidden>
+      <h2>Spreadsheet tujuan data</h2>
+      <label for="url">Link Google Spreadsheet</label>
+      <input id="url" type="url" inputmode="url" autocomplete="off" autocapitalize="off" spellcheck="false"
+             placeholder="https://docs.google.com/spreadsheets/d/…">
+      <label for="sheet">Nama sheet (tab)</label>
+      <input id="sheet" type="text" list="daftarSheet" autocomplete="off" placeholder="Data">
+      <datalist id="daftarSheet"></datalist>
+      <p class="hint">Baris 1 sheet dipakai sebagai judul kolom. Kalau nama sheet belum ada, sheet dibuat otomatis. Perubahan berlaku untuk semua pengguna setelah disimpan.</p>
+      <div class="dua">
+        <button type="button" id="btnHubung" class="btn ghost">Hubungkan &amp; cek</button>
+        <button type="button" id="btnSimpanSheet" class="btn primary">Simpan pengaturan</button>
+      </div>
+      <div id="infoSheet" class="note" hidden></div>
+      <p id="akunHint" class="hint" hidden></p>
+
+      <h2 class="gap">Perangkat lain</h2>
+      <p class="hint">Agar HP atau laptop lain tidak perlu mengetik Client ID dan link, bagikan tautan setup ini.</p>
+      <button type="button" id="btnLinkSetup" class="btn ghost">Buat tautan setup</button>
+      <input id="linkSetup" type="text" readonly hidden aria-label="Tautan setup">
+    </section>
+
+    <!-- Kolom (admin) -->
+    <section id="p-kolom" class="card" hidden>
+      <h2>Kolom isian</h2>
+      <p class="hint">Tiap kolom di sini menjadi satu kolom di spreadsheet. Kolom baru otomatis ditambahkan di sebelah kanan, data lama tidak berubah.</p>
+      <div id="daftarKolom"></div>
+      <button type="button" id="btnTambah" class="btn ghost">＋ Tambah kolom</button>
+      <label class="check"><input type="checkbox" id="waktu"> <span>Catat waktu input otomatis (kolom “Waktu Input”)</span></label>
+      <label class="check"><input type="checkbox" id="catatUser"> <span>Catat siapa yang mengisi (kolom “Diinput Oleh”)</span></label>
+      <p class="hint"><b>Nomor / kode</b> cocok untuk HP, NIK, rekening: angka berapa pun disimpan sebagai teks supaya angka 0 di depan tidak hilang.</p>
+      <button type="button" id="btnSelesai" class="btn primary">Simpan &amp; mulai isi data</button>
+    </section>
+
+    <!-- Pengguna (admin) -->
+    <section id="p-user" class="card" hidden>
+      <h2>Pengguna</h2>
+      <p class="hint">Admin bisa mengatur spreadsheet, kolom, dan pengguna. Pengguna biasa hanya bisa mengisi data.</p>
+      <div id="daftarUser"></div>
+      <h2 class="gap">Tambah pengguna</h2>
+      <form id="formUser" autocomplete="off">
+        <label for="nu">Username</label>
+        <input id="nu" type="text" autocomplete="off" autocapitalize="none" spellcheck="false" maxlength="30" placeholder="mis. budi">
+        <label for="np">Password awal <small>(kosongkan agar dibuatkan otomatis)</small></label>
+        <input id="np" type="text" autocomplete="off" autocapitalize="none" spellcheck="false" maxlength="200">
+        <label for="nr">Peran</label>
+        <select id="nr">
+          <option value="user">Pengguna biasa (hanya isi data)</option>
+          <option value="admin">Admin (akses penuh)</option>
+        </select>
+        <button type="submit" id="btnTambahUser" class="btn primary">Tambah pengguna</button>
+      </form>
+      <div id="infoUser" class="note" hidden></div>
+    </section>
+
+    <!-- Ganti password (semua peran) -->
+    <section id="p-akun" class="card" hidden>
+      <h2>Ganti password</h2>
+      <div id="wajibInfo" class="note warn" hidden>Demi keamanan, ganti password awalmu dulu sebelum memakai aplikasi.</div>
+      <form id="formPass" autocomplete="off">
+        <label for="pl">Password lama</label>
+        <input id="pl" type="password" autocomplete="current-password" maxlength="200">
+        <label for="pb">Password baru <small>(minimal 8 karakter)</small></label>
+        <input id="pb" type="password" autocomplete="new-password" maxlength="200">
+        <label for="pu">Ulangi password baru</label>
+        <input id="pu" type="password" autocomplete="new-password" maxlength="200">
+        <button type="submit" id="btnGanti" class="btn primary">Simpan password</button>
+        <button type="button" id="btnKembali" class="btn ghost">Kembali</button>
+      </form>
+    </section>
+  </section>
+</div>
+
+<div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+<script src="app.js"></script>
+<script src="https://accounts.google.com/gsi/client" async defer></script>
+</body>
+</html>
